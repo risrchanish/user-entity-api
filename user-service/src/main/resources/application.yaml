@@ -1,3 +1,47 @@
 spring:
   application:
     name: user-service
+  flyway:
+    locations: classpath:db/migration
+  datasource:
+    hikari:
+      maximum-pool-size: 50
+      connection-init-sql: "SET TIME ZONE 'UTC'"
+  jpa:
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+server:
+  port: 8081
+---
+spring:
+  config:
+    activate:
+      on-profile: default
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:5432/users_db
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+  datasource:
+    url: jdbc:postgresql://postgres-users:5432/users_db
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
