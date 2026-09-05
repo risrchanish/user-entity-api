@@ -1,5 +1,6 @@
 package com.syncvault.user_service.service;
 
+import com.syncvault.user_service.config.SecurityConfig;
 import com.syncvault.user_service.dto.RegisterRequest;
 import com.syncvault.user_service.dto.RegisterResponse;
 import com.syncvault.user_service.entity.User;
@@ -15,6 +16,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder){
         this.userRepository = userRepository;
@@ -33,12 +35,12 @@ public class AuthService {
         user.setFullName(request.getFullName());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
 
-        userRepository.save(user);
+        User savedUser = userRepository.saveAndFlush(user);
 
 
-        return RegisterResponse.builder().userId(user.getId())
-                .email(user.getEmail()).fullName(user.getFullName())
-                .createdAt(user.getCreatedAt()).build();
+        return RegisterResponse.builder().userId(savedUser.getId())
+                .email(savedUser.getEmail()).fullName(savedUser.getFullName())
+                .createdAt(savedUser.getCreatedAt()).build();
     }
 
 
