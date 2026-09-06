@@ -12,7 +12,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -54,10 +56,15 @@ class AuthServiceTest {
         request.setPassword("password123");
         request.setFullName("Test User");
 
+        UUID expectedId = UUID.randomUUID();
+        LocalDateTime expectedTime = LocalDateTime.now();
+
         User savedUser = new User();
+        savedUser.setId(expectedId);
         savedUser.setEmail("test@example.com");
         savedUser.setFullName("Test User");
         savedUser.setPasswordHash("hashedPassword");
+        savedUser.setCreatedAt(expectedTime);
 
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("password123")).thenReturn("hashedPassword");

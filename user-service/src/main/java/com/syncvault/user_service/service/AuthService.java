@@ -1,6 +1,5 @@
 package com.syncvault.user_service.service;
 
-import com.syncvault.user_service.config.SecurityConfig;
 import com.syncvault.user_service.dto.RegisterRequest;
 import com.syncvault.user_service.dto.RegisterResponse;
 import com.syncvault.user_service.entity.User;
