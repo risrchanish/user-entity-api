@@ -1,7 +1,5 @@
 package com.syncvault.user_service.exception;
 
-import org.apache.coyote.Response;
-import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
