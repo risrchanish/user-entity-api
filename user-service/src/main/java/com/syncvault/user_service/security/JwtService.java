@@ -1,6 +1,6 @@
 package com.syncvault.user_service.security;
 
-import io.jsonwebtoken.Jwt;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -14,11 +14,17 @@ import java.util.Date;
 @Service
 public class JwtService {
 
-    @Value("${application.security.jwt.secret-key}")
-    private String secretKey;
-    @Value("${application.security.jwt.expiration}")
-    private long expiration;
+    private final SecretKey signingKey;
+    private final long expiration;
 
+    public JwtService(
+            @Value("${application.security.jwt.secret-key}")
+            String secretKey,
+            @Value("${application.security.jwt.expiration}")
+            long expiration){
+        this.signingKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey));
+        this.expiration = expiration;
+    }
 
     public String generateToken(String email){
         return Jwts
@@ -26,23 +32,14 @@ public class JwtService {
                 .subject(email)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expiration))
-                .signWith(getSigningKey())
+                .signWith(signingKey)
                 .compact();
     }
 
-    private SecretKey getSigningKey(){
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
-        return Keys.hmacShaKeyFor(keyBytes);
-    }
+
 
     public String extractEmail(String token){
-        return Jwts
-                .parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload()
-                .getSubject();
+        return parseClaims(token).getSubject();
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails){
@@ -51,16 +48,15 @@ public class JwtService {
     }
 
     private boolean isTokenExpired(String token){
-        return extractExpiration(token).before(new Date());
+        return parseClaims(token).getExpiration().before(new Date());
     }
 
-    private Date extractExpiration(String token){
+    private Claims parseClaims(String token){
         return Jwts
                 .parser()
-                .verifyWith(getSigningKey())
+                .verifyWith(signingKey)
                 .build()
                 .parseSignedClaims(token)
-                .getPayload()
-                .getExpiration();
+                .getPayload();
     }
 }
