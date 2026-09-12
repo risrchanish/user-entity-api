@@ -1,6 +1,8 @@
 package com.syncvault.user_service.security;
 
+import com.syncvault.user_service.entity.User;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -10,45 +12,52 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.UUID;
 
 @Service
 public class JwtService {
 
     private final SecretKey signingKey;
-    private final long expiration;
+    private final long accessTokenExpiration;
+
 
     public JwtService(
             @Value("${application.security.jwt.secret-key}")
             String secretKey,
-            @Value("${application.security.jwt.expiration}")
-            long expiration){
+            @Value("${application.security.jwt.access-expiration}")
+            long accessTokenExpiration)
+            {
         this.signingKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey));
-        this.expiration = expiration;
+        this.accessTokenExpiration = accessTokenExpiration;
+
     }
 
-    public String generateToken(String email){
+    public String generateToken(User user){
+
         return Jwts
                 .builder()
-                .subject(email)
+                .subject(user.getId().toString())
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + expiration))
+                .expiration(new Date(System.currentTimeMillis() + accessTokenExpiration))
                 .signWith(signingKey)
                 .compact();
     }
 
-
-
-    public String extractEmail(String token){
-        return parseClaims(token).getSubject();
+    public UUID extractUserId(String token){
+        return UUID.fromString(parseClaims(token).getSubject());
     }
 
-    public boolean isTokenValid(String token, UserDetails userDetails){
-        String email = extractEmail(token);
-        return email.equalsIgnoreCase(userDetails.getUsername()) && !isTokenExpired(token);
+    public boolean validateToken(String token){
+        try{
+            parseClaims(token);
+            return true;
+        } catch(JwtException | IllegalArgumentException ex){
+            return false;
+        }
     }
 
-    private boolean isTokenExpired(String token){
-        return parseClaims(token).getExpiration().before(new Date());
+    public long getAccessTokenExpirationSeconds(){
+        return accessTokenExpiration / 1000;
     }
 
     private Claims parseClaims(String token){

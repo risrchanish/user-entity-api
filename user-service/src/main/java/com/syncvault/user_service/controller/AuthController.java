@@ -1,5 +1,7 @@
 package com.syncvault.user_service.controller;
 
+import com.syncvault.user_service.dto.AuthResponse;
+import com.syncvault.user_service.dto.LoginRequest;
 import com.syncvault.user_service.dto.RegisterRequest;
 import com.syncvault.user_service.dto.RegisterResponse;
 import com.syncvault.user_service.service.AuthService;
@@ -24,5 +26,11 @@ public class AuthController {
     public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request){
 
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.registerUser(request));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request){
+
+        return ResponseEntity.status(HttpStatus.OK).body(authService.loginUser(request));
     }
 }

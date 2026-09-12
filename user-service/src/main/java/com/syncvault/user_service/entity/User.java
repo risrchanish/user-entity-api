@@ -27,8 +27,8 @@ public class User {
     private String email;
     private String passwordHash;
     private String fullName;
-    private Boolean locked;
-    private Boolean enabled;
+    private Boolean locked = false;
+    private Boolean enabled = true;
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;
