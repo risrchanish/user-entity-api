@@ -49,4 +49,5 @@ spring:
     security:
       jwt:
         secret-key: your-256-bit-base64-encoded-secretKey
-        expiration: 86400000
+        access-expiration: 900000
+        refresh-expiration: 604800000
