@@ -52,4 +52,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse("Email already registered"));
     }
+
+    @ExceptionHandler(UnauthorizedInternalCallException.class)
+    public ResponseEntity<ErrorResponse> unauthorizedInternalCallException(UnauthorizedInternalCallException exception){
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponse(exception.getMessage()));
+    }
 }

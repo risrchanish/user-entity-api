@@ -22,18 +22,15 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
-    private final String email;
 
 
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
-                       JwtService jwtService,
-                       String email)
+                       JwtService jwtService)
     {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
-        this.email = email;
     }
 
     public RegisterResponse registerUser(RegisterRequest request){

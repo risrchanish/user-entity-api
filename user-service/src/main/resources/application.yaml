@@ -1,8 +1,8 @@
 spring:
   application:
     name: user-service
-  flyway:
-    locations: classpath:db/migration
+---
+spring:
   datasource:
     hikari:
       maximum-pool-size: 50
@@ -12,6 +12,15 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+application:
+  security:
+    jwt:
+      secret-key: ${JWT_SECRET_KEY}
+      access-expiration: 900000
+      refresh-expiration: 604800000
+internal:
+  api:
+    secret: ${INTERNAL_API_SECRET}
 management:
   endpoints:
     web:
@@ -19,6 +28,7 @@ management:
         include: health,info
 server:
   port: 8081
+
 ---
 spring:
   config:
@@ -45,9 +55,3 @@ spring:
     hibernate:
       ddl-auto: validate
     show-sql: true
-  application:
-    security:
-      jwt:
-        secret-key: your-256-bit-base64-encoded-secretKey
-        access-expiration: 900000
-        refresh-expiration: 604800000
