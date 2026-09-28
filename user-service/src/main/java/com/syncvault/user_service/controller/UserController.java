@@ -4,7 +4,6 @@ import com.syncvault.user_service.dto.UserEmailResponse;
 import com.syncvault.user_service.entity.User;
 import com.syncvault.user_service.exception.UnauthorizedInternalCallException;
 import com.syncvault.user_service.service.UserService;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,7 +28,7 @@ public class UserController {
 
     @GetMapping("{userId}/email")
     public ResponseEntity<UserEmailResponse> getUserEmail(
-            @PathVariable UUID userId,
+            @PathVariable("userId") UUID userId,
             @RequestHeader("X-Internal-Api-Key") String providedKey){
 
         boolean isValidKey = MessageDigest.isEqual(

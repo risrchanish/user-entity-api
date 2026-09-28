@@ -31,6 +31,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET,"/users/{userId}/email").permitAll()
+                        .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated());
         return http.build();
     }
