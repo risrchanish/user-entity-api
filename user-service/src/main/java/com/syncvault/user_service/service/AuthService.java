@@ -4,16 +4,23 @@ import com.syncvault.user_service.dto.AuthResponse;
 import com.syncvault.user_service.dto.LoginRequest;
 import com.syncvault.user_service.dto.RegisterRequest;
 import com.syncvault.user_service.dto.RegisterResponse;
+import com.syncvault.user_service.entity.RefreshToken;
 import com.syncvault.user_service.entity.User;
 import com.syncvault.user_service.exception.DuplicateEmailException;
 import com.syncvault.user_service.exception.InvalidCredentialsException;
+import com.syncvault.user_service.repository.RefreshTokenRepository;
 import com.syncvault.user_service.repository.UserRepository;
 import com.syncvault.user_service.security.JwtService;
 import jakarta.transaction.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.util.UUID;
+
 
 @Service
 @Transactional
@@ -22,15 +29,18 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final RefreshTokenRepository refreshTokenRepository;
 
 
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
-                       JwtService jwtService)
+                       JwtService jwtService,
+                       RefreshTokenRepository refreshTokenRepository)
     {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.refreshTokenRepository = refreshTokenRepository;
     }
 
     public RegisterResponse registerUser(RegisterRequest request){
@@ -65,15 +75,41 @@ public class AuthService {
         }
 
         String token = jwtService.generateToken(user);
+        String rawRefreshToken = UUID.randomUUID().toString();
+        String hashedRefreshToken = hashToken(rawRefreshToken);
+        RefreshToken refreshTokenEntity = new RefreshToken();
+        refreshTokenEntity.setToken(hashedRefreshToken);
+        refreshTokenEntity.setUser(user);
+        refreshTokenEntity.setExpiresAt(Instant.now()
+                .plusMillis(jwtService.getRefreshTokenExpirationMillis()));
+        refreshTokenEntity.setRevoked(false);
+
+        refreshTokenRepository.save(refreshTokenEntity);
 
         return AuthResponse.builder()
                 .userId(user.getId())
                 .email(user.getEmail())
-                .accessToken(token).tokenType("Bearer")
+                .accessToken(token)
+                .refreshToken(rawRefreshToken)
+                .tokenType("Bearer")
                 .expiresIn(jwtService.getAccessTokenExpirationSeconds())
                 .build();
 
     }
 
+    private String hashToken(String rawToken){
+
+        try{
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hashedBytes = digest.digest(rawToken.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for(byte b : hashedBytes){
+                hexString.append(String.format("%02x", b));
+            }
+            return hexString.toString();
+        }catch(NoSuchAlgorithmException exception){
+            throw new RuntimeException("SHA algorithm not available "+exception);
+        }
+    }
 
 }

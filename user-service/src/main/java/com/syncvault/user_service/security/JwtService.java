@@ -18,16 +18,21 @@ public class JwtService {
 
     private final SecretKey signingKey;
     private final long accessTokenExpiration;
+    private final long refreshTokenExpiration;
 
 
     public JwtService(
             @Value("${application.security.jwt.secret-key}")
             String secretKey,
             @Value("${application.security.jwt.access-expiration}")
-            long accessTokenExpiration)
+            long accessTokenExpiration,
+            @Value("${application.security.jwt.refresh-expiration}")
+            long refreshTokenExpiration)
+
             {
         this.signingKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey));
         this.accessTokenExpiration = accessTokenExpiration;
+        this.refreshTokenExpiration = refreshTokenExpiration;
 
     }
 
@@ -57,6 +62,9 @@ public class JwtService {
 
     public long getAccessTokenExpirationSeconds(){
         return accessTokenExpiration / 1000;
+    }
+    public long getRefreshTokenExpirationMillis(){
+        return refreshTokenExpiration;
     }
 
     private Claims parseClaims(String token){
