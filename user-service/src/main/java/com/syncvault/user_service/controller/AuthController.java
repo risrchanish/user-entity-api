@@ -1,9 +1,6 @@
 package com.syncvault.user_service.controller;
 
-import com.syncvault.user_service.dto.AuthResponse;
-import com.syncvault.user_service.dto.LoginRequest;
-import com.syncvault.user_service.dto.RegisterRequest;
-import com.syncvault.user_service.dto.RegisterResponse;
+import com.syncvault.user_service.dto.*;
 import com.syncvault.user_service.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -32,5 +29,17 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request){
 
         return ResponseEntity.status(HttpStatus.OK).body(authService.loginUser(request));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request){
+
+        return ResponseEntity.status(HttpStatus.OK).body(authService.refreshToken(request.refreshToken()));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request){
+        authService.logoutUser(request.refreshToken());
+        return ResponseEntity.status(HttpStatus.OK).build();
     }
 }

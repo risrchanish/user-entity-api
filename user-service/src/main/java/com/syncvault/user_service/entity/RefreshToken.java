@@ -22,6 +22,7 @@ public class RefreshToken {
     @ManyToOne
     private User user;
     private Instant expiresAt;
+    @Column(nullable = false)
     private Boolean revoked = false;
     @CreationTimestamp
     private LocalDateTime createdAt;

@@ -8,6 +8,7 @@ import com.syncvault.user_service.entity.RefreshToken;
 import com.syncvault.user_service.entity.User;
 import com.syncvault.user_service.exception.DuplicateEmailException;
 import com.syncvault.user_service.exception.InvalidCredentialsException;
+import com.syncvault.user_service.exception.InvalidRefreshTokenException;
 import com.syncvault.user_service.repository.RefreshTokenRepository;
 import com.syncvault.user_service.repository.UserRepository;
 import com.syncvault.user_service.security.JwtService;
@@ -95,6 +96,56 @@ public class AuthService {
                 .expiresIn(jwtService.getAccessTokenExpirationSeconds())
                 .build();
 
+    }
+
+    public AuthResponse refreshToken(String rawToken){
+
+        RefreshToken token = findValidRefreshToken(rawToken);
+
+        User user = token.getUser();
+
+        token.setRevoked(true);
+
+        String newAccessToken = jwtService.generateToken(user);
+        String newRawRefreshToken = UUID.randomUUID().toString();
+        String newHashedRefreshToken = hashToken(newRawRefreshToken);
+
+        RefreshToken newRefreshTokenEntity = new RefreshToken();
+        newRefreshTokenEntity.setToken(newHashedRefreshToken);
+        newRefreshTokenEntity.setUser(user);
+        newRefreshTokenEntity.setExpiresAt(Instant.now()
+                .plusMillis(jwtService.getRefreshTokenExpirationMillis()));
+        newRefreshTokenEntity.setRevoked(false);
+
+        refreshTokenRepository.save(newRefreshTokenEntity);
+
+        return AuthResponse.builder()
+                .userId(user.getId())
+                .email(user.getEmail())
+                .refreshToken(newRawRefreshToken)
+                .accessToken(newAccessToken)
+                .tokenType("Bearer")
+                .expiresIn(jwtService.getAccessTokenExpirationSeconds())
+                .build();
+
+    }
+
+    public void logoutUser(String rawToken){
+
+        RefreshToken refreshToken = findValidRefreshToken(rawToken);
+        refreshToken.setRevoked(true);
+    }
+
+    private RefreshToken findValidRefreshToken(String rawToken){
+
+        String hashToken = hashToken(rawToken);
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(hashToken)
+                .orElseThrow(() -> new InvalidRefreshTokenException("Invalid refresh token"));
+
+        if(Boolean.TRUE.equals(refreshToken.getRevoked()) || refreshToken.getExpiresAt().isBefore(Instant.now())){
+            throw new InvalidRefreshTokenException("Invalid refresh token");
+        }
+        return refreshToken;
     }
 
     private String hashToken(String rawToken){
