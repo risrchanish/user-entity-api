@@ -15,17 +15,27 @@ import com.syncvault.user_service.security.JwtService;
 import jakarta.transaction.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 
 @Service
 @Transactional
 public class AuthService {
+
+    // A fixed bcrypt hash (cost 10, same as PasswordEncoder's default) of an
+    // arbitrary constant string -- never a real user's hash. Used only so
+    // loginUser() can run passwordEncoder.matches() against *something* when
+    // the email doesn't exist, keeping that path's timing indistinguishable
+    // from a found-user-wrong-password path (AC-004-04's own stated intent:
+    // "Do NOT reveal which field was wrong" -- applied to timing, not just
+    // the response message TC-004-04 checks).
+    private static final String DUMMY_HASH =
+            "$2b$10$go4SNIuEkHGcdsArFyGSsu921wfdIC0.Gqav1C5GJydFpYhNB9u.m";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -68,12 +78,18 @@ public class AuthService {
     public AuthResponse loginUser(LoginRequest request){
 
         String userEmail = request.getEmail().trim().toLowerCase();
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password."));
+        Optional<User> maybeUser = userRepository.findByEmail(userEmail);
 
-        if(!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())){
+        // Always run the slow bcrypt comparison, even when the email doesn't
+        // exist, so "no such user" and "wrong password" take the same amount
+        // of time and can't be told apart by a caller timing the response.
+        String hashToCompare = maybeUser.map(user -> user.getPasswordHash()).orElse(DUMMY_HASH);
+        boolean passwordMatches = passwordEncoder.matches(request.getPassword(), hashToCompare);
+
+        if (maybeUser.isEmpty() || !passwordMatches) {
             throw new InvalidCredentialsException("Invalid email or password.");
         }
+        User user = maybeUser.get();
 
         String token = jwtService.generateToken(user);
         String rawRefreshToken = UUID.randomUUID().toString();

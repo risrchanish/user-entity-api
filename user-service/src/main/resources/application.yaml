@@ -15,12 +15,12 @@ spring:
 application:
   security:
     jwt:
-      secret-key: ${JWT_SECRET_KEY}
+      secret-key: "secret-key"
       access-expiration: 900000
       refresh-expiration: 604800000
 internal:
   api:
-    secret: ${INTERNAL_API_SECRET}
+    secret: "secret"
 management:
   endpoints:
     web:

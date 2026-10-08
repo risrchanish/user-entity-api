@@ -1,3 +1,43 @@
 spring:
   application:
     name: api-gateway
+  threads:
+    virtual:
+      enabled: true
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          routes:
+            - id: auth-route
+              uri: http://localhost:8081
+              predicates:
+                - Path=/auth/**
+            - id: users-route
+              uri: http://localhost:8081
+              predicates:
+                - Path=/users/**
+            - id: files-route
+              uri: http://localhost:8082
+              predicates:
+                - Path=/files/**
+            - id: notifications-route
+              uri: http://localhost:8083
+              predicates:
+                - Path=/notifications/**
+
+gateway:
+  public-paths: /auth/**,/actuator/**
+
+application:
+  security:
+    jwt:
+      secret-key: "secret-key"
+
+  ratelimit:
+    authenticated-limit: 100
+    unauthenticated-limit: 10
+
+
+server:
+  port: 8080
