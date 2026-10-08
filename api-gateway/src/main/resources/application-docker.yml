@@ -1,0 +1,22 @@
+spring:
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          routes:
+            - id: auth-route
+              uri: http://user-service:8081
+              predicates:
+                  - Path=/auth/**
+            - id: users-route
+              uri: http://user-service:8081
+              predicates:
+                - Path=/users/**
+            - id: files-route
+              uri: http://file-service:8082
+              predicates:
+                - Path=/files/**
+            - id: notifications-route
+              uri: http://notification-service:8083
+              predicates:
+                - Path=/notifications/**
