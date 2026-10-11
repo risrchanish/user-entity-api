@@ -75,7 +75,7 @@ public class UserController {
     public ResponseEntity<Void> addStorage(
             @PathVariable("userId") UUID userId,
             @RequestBody AddStorageRequest request,
-            @RequestHeader String providedKey){
+            @RequestHeader("X-Internal-Api-Key") String providedKey){
 
         boolean isValidKey = MessageDigest.isEqual(
                 providedKey.getBytes(StandardCharsets.UTF_8),
