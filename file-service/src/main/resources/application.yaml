@@ -1,3 +1,90 @@
 spring:
   application:
     name: file-service
+---
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: 50
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+internal:
+  api:
+    secret: "secret-key"
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,circuitbreakers,circuitbreakerevents
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      userStorageService:
+        failureRateThreshold: 50
+        slidingWindowSize: 10
+        slidingWindowType: COUNT_BASED
+        waitDurationInOpenState: 30s
+        permittedNumberOfCallsInHalfOpenState: 3
+  retry:
+    instances:
+      userStorageServiceRetry:
+        maxAttempts: 3
+        waitDuration: 200ms
+
+aws:
+  s3:
+    bucket-name: syncvault-files
+    region: us-east-1
+    presigned-url-expiry-minutes: 15
+
+server:
+  port: 8082
+---
+spring:
+  config:
+    activate:
+      on-profile: default
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:5433/files_db
+    username: postgres
+    password: postgres
+aws:
+  s3:
+    end-point: http://localhost:4566
+    access-key: test
+    secret-key: test
+    bucket-name: syncvault-files
+    region: us-east-1
+    presigned-url-expiry-minutes: 15
+
+services:
+  user-service:
+    base-url: http://user-service:8081
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+  datasource:
+    url: jdbc:postgresql://postgres-files:5432/files_db
+    username: postgres
+    password: postgres
+aws:
+  s3:
+    end-point: http://localstack:4566
+    access-key: test
+    secret-key: test
+    bucket-name: syncvault-files
+    region: us-east-1
+    presigned-url-expiry-minutes: 15
+
+services:
+  user-service:
+    base-url: http://user-service:8081
