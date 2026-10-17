@@ -33,6 +33,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/login").permitAll()
                         .requestMatchers("/auth/refresh").permitAll()
                         .requestMatchers(HttpMethod.GET,"/users/{userId}/email").permitAll()
+                        .requestMatchers(HttpMethod.PATCH,"/users/{userId}/storage").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .anyRequest().authenticated());

@@ -1,0 +1,8 @@
+package com.syncvault.file_service.exception;
+
+public class InvalidFileRequestException extends RuntimeException {
+
+    public InvalidFileRequestException(String message){
+        super(message);
+    }
+}

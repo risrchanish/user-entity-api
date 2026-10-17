@@ -104,6 +104,22 @@ services:
     ports:
       - "8080:8080"
 
+  file-service:
+    build:
+      context: .
+      dockerfile: file-service/Dockerfile
+    container_name: file-service
+    depends_on:
+      postgres-files:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      localstack:
+        condition: service_started
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DEBUG: "true"
+
 volumes:
   postgres-users-data:
   postgres-files-data:

@@ -1,0 +1,1 @@
+ALTER table users ADD COLUMN storage_used_bytes BIGINT NOT NULL DEFAULT 0;

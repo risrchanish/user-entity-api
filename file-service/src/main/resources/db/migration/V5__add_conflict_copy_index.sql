@@ -1,0 +1,1 @@
+CREATE INDEX idx_files_conflict_copy ON files(original_file_id) WHERE conflict_copy = true;
