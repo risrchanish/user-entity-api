@@ -1,5 +1,7 @@
 package com.syncvault.file_service.controller;
 
+import com.syncvault.file_service.ai.FileAiCoordinator;
+import com.syncvault.file_service.ai.FileSearchService;
 import com.syncvault.file_service.dto.*;
 import com.syncvault.file_service.exception.ErrorResponse;
 import com.syncvault.file_service.service.FileService;
@@ -18,9 +20,14 @@ import static com.syncvault.file_service.constant.CommonConstant.HEADER_USER_ID;
 public class FileController {
 
     private final FileService fileService;
+    private final FileAiCoordinator fileAiCoordinator;
+    private final FileSearchService fileSearchService;
 
-    public FileController(FileService fileService){
+    public FileController(FileService fileService, FileAiCoordinator fileAiCoordinator,
+                          FileSearchService fileSearchService){
         this.fileService = fileService;
+        this.fileAiCoordinator = fileAiCoordinator;
+        this.fileSearchService = fileSearchService;
     }
 
     @PostMapping(value = "/upload", consumes = "multipart/form-data")
@@ -35,15 +42,18 @@ public class FileController {
 
         FileUploadResponse response = fileService.uploadFile(userId, file);
 
+        fileAiCoordinator.processAsync(response.fileId(), userId, response.s3Key(), response.contentType());
+
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+
     }
 
     @PutMapping(value = "/{fileId}/upload", consumes = "multipart/form-data")
     public ResponseEntity<?> reUploadFile(
             @RequestHeader(HEADER_USER_ID) UUID userId,
-            @PathVariable UUID fileId,
+            @PathVariable("fileId") UUID fileId,
             @RequestParam("file") MultipartFile file,
-            @RequestParam(required = false) Integer expectedVersion){
+            @RequestParam(value = "expectedVersion", required = false) Integer expectedVersion){
 
         if(file.isEmpty()){
             return ResponseEntity.badRequest()
@@ -58,7 +68,7 @@ public class FileController {
     @GetMapping("/{fileId}/versions")
     public ResponseEntity<List<FileVersionResponse>> getFileVersions(
             @RequestHeader(HEADER_USER_ID) UUID userId,
-            @PathVariable UUID fileId){
+            @PathVariable("fileId") UUID fileId){
 
         return ResponseEntity.ok(fileService.getFileVersions(userId, fileId));
     }
@@ -66,52 +76,68 @@ public class FileController {
     @GetMapping("/{fileId}")
     public ResponseEntity<?> getFile(
             @RequestHeader(HEADER_USER_ID) UUID userId,
-            @PathVariable UUID fileId){
+            @PathVariable("fileId") UUID fileId){
         return ResponseEntity.ok(fileService.getFile(userId, fileId));
     }
 
     @GetMapping("/user/{userId}")
     public ResponseEntity<?> listUserFiles(
             @RequestHeader(HEADER_USER_ID) UUID authenticatedUserId,
-            @PathVariable UUID userId){
+            @PathVariable("userId") UUID userId){
         return ResponseEntity.ok(fileService.listUserFiles(authenticatedUserId, userId));
     }
 
     @GetMapping("/{fileId}/download")
     public ResponseEntity<?> getDownloadUrl(
             @RequestHeader(HEADER_USER_ID) UUID userId,
-            @PathVariable UUID fileId){
+            @PathVariable("fileId") UUID fileId){
         return ResponseEntity.ok(fileService.getDownloadUrl(userId, fileId));
     }
 
     @DeleteMapping("/{fileId}")
     public ResponseEntity<Void> deleteFile(
             @RequestHeader(HEADER_USER_ID) UUID userId,
-            @PathVariable UUID fileId){
+            @PathVariable("fileId") UUID fileId){
         fileService.deleteFile(userId, fileId);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{fileId}/restore")
     public ResponseEntity<FileResponse> restoreFile(
-            @RequestHeader("X-User-Id") UUID userId,
-            @PathVariable UUID fileId){
+            @RequestHeader(HEADER_USER_ID) UUID userId,
+            @PathVariable("fileId") UUID fileId){
         return ResponseEntity.ok(fileService.restoreFile(userId, fileId));
     }
 
     @PatchMapping("/{fileId}")
     public ResponseEntity<FileResponse> updateFile(
             @RequestHeader(HEADER_USER_ID) UUID userId,
-            @PathVariable UUID fileId,
+            @PathVariable("fileId") UUID fileId,
             @RequestBody PatchFileRequest request){
         return ResponseEntity.ok(fileService.updateFileMetadata(userId, fileId, request));
     }
 
-    @GetMapping("/{fileId}/versions/{versionNumber}/restore")
+    @PostMapping("/{fileId}/versions/{versionNumber}/restore")
     public ResponseEntity<VersionRestoreResponse> restoreVersion(
             @RequestHeader(HEADER_USER_ID) UUID userId,
-            @PathVariable UUID fileId,
-            @PathVariable Integer versionNumber){
-        return ResponseEntity.ok(fileService.restoreToVersion(userId, fileId, versionNumber));
+            @PathVariable("fileId") UUID fileId,
+            @PathVariable("versionNumber") Integer versionNumber){
+
+        VersionRestoreResponse response = fileService.restoreToVersion(userId, fileId, versionNumber);
+        fileAiCoordinator.processAsync(response.fileId(), userId, response.s3Key(), response.contentType());
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<?> searchFiles(
+            @RequestHeader(HEADER_USER_ID) UUID userId,
+            @RequestParam(value = "q", required = false) String q){
+
+        if (q == null || q.isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse("Search query must not be blank."));
+        }
+
+        return ResponseEntity.ok(fileSearchService.search(userId, q));
     }
 }

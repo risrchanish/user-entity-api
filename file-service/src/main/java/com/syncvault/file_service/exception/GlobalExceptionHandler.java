@@ -49,4 +49,10 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ConflictResponse(exception.getConflictCopyId(), exception.getConflictFileName(), exception.getMessage()));
     }
+
+    @ExceptionHandler(SearchUnavailableException.class)
+    public ResponseEntity<ErrorResponse> searchUnavailableException(SearchUnavailableException exception) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new ErrorResponse(exception.getMessage()));
+    }
 }

@@ -38,6 +38,15 @@ public class S3Service {
                         .build(), RequestBody.fromBytes(bytes));
     }
 
+    public byte[] downloadFile(String s3Key) {
+        return s3Client.getObjectAsBytes(
+                GetObjectRequest.builder()
+                        .bucket(bucketName)
+                        .key(s3Key)
+                        .build()
+        ).asByteArray();
+    }
+
     public String buildS3Key(UUID userId, UUID fileId, int versionNumber, String fileName){
         return userId + "/"  + fileId + "/" + versionNumber + "/" +fileName;
     }
