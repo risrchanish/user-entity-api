@@ -8,5 +8,7 @@ public record VersionRestoreResponse(
         Long fileSize,
         Integer restoredFromVersion,
         Integer currentVersion,
-        String message
+        String message,
+        String s3Key,
+        String contentType
 ) {}

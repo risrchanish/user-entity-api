@@ -337,7 +337,9 @@ public class FileService {
                 fm.getFileSizeBytes(),
                 versionNumber,
                 newVersionNumber,
-                "File restored to version " + versionNumber + " successfully.");
+                "File restored to version " + versionNumber + " successfully.",
+                fm.getS3Key(),
+                fm.getMimeType());
     }
 
 
