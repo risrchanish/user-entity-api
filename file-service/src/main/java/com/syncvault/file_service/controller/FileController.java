@@ -3,7 +3,9 @@ package com.syncvault.file_service.controller;
 import com.syncvault.file_service.ai.FileAiCoordinator;
 import com.syncvault.file_service.ai.FileSearchService;
 import com.syncvault.file_service.dto.*;
+import com.syncvault.file_service.event.FileEventProducer;
 import com.syncvault.file_service.exception.ErrorResponse;
+import com.syncvault.file_service.exception.FileConflictException;
 import com.syncvault.file_service.service.FileService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -98,7 +100,8 @@ public class FileController {
     public ResponseEntity<Void> deleteFile(
             @RequestHeader(HEADER_USER_ID) UUID userId,
             @PathVariable("fileId") UUID fileId){
-        fileService.deleteFile(userId, fileId);
+       fileService.deleteFile(userId, fileId);
+
         return ResponseEntity.noContent().build();
     }
 

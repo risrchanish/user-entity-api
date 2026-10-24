@@ -1,3 +1,27 @@
 spring:
   application:
     name: notification-service
+  kafka:
+    consumer:
+      group-id: notification-service-group
+      auto-offset-reset: earliest
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+
+server:
+  port: 8083
+---
+spring:
+  config:
+    activate:
+      on-profile: default
+  kafka:
+    bootstrap-servers: localhost:9092
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+  kafka:
+    bootstrap-servers: kafka:29092

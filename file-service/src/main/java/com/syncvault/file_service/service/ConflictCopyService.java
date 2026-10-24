@@ -2,6 +2,7 @@ package com.syncvault.file_service.service;
 
 import com.syncvault.file_service.entity.FileMetadata;
 import com.syncvault.file_service.entity.FileVersion;
+import com.syncvault.file_service.event.OutboxEventWriter;
 import com.syncvault.file_service.repository.FileMetadataRepository;
 import com.syncvault.file_service.repository.FileVersionRepository;
 import org.springframework.stereotype.Service;
@@ -18,13 +19,16 @@ public class ConflictCopyService {
     private final FileMetadataRepository fileMetadataRepository;
     private final FileVersionRepository fileVersionRepository;
     private final S3Service s3Service;
+    private final OutboxEventWriter outboxEventWriter;
 
     public ConflictCopyService(FileMetadataRepository fileMetadataRepository,
                                FileVersionRepository fileVersionRepository,
-                               S3Service s3Service){
+                               S3Service s3Service,
+                               OutboxEventWriter outboxEventWriter){
         this.fileMetadataRepository = fileMetadataRepository;
         this.fileVersionRepository = fileVersionRepository;
         this.s3Service = s3Service;
+        this.outboxEventWriter = outboxEventWriter;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -61,6 +65,8 @@ public class ConflictCopyService {
                 .fileSize((long) bytes.length)
                 .build();
         fileVersionRepository.save(conflictVersion);
+        outboxEventWriter.writeConflictEvent(conflictCopy.getId(), userId, conflictCopy.getFileName(),
+                conflictCopy.getFileSizeBytes(), conflictCopy.getVersionNumber());
 
         return conflictCopy;
     }
