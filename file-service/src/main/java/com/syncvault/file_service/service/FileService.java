@@ -4,6 +4,7 @@ import com.syncvault.file_service.client.UserStorageClient;
 import com.syncvault.file_service.dto.*;
 import com.syncvault.file_service.entity.FileMetadata;
 import com.syncvault.file_service.entity.FileVersion;
+import com.syncvault.file_service.event.OutboxEventWriter;
 import com.syncvault.file_service.exception.*;
 import com.syncvault.file_service.repository.FileEmbeddingRepository;
 import com.syncvault.file_service.repository.FileMetadataRepository;
@@ -19,6 +20,8 @@ import java.io.UncheckedIOException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+
+import static com.syncvault.file_service.constant.CommonConstant.FILE_NOT_FOUND;
 import static com.syncvault.file_service.constant.CommonConstant.STORAGE_LIMIT_BYTES;
 
 @Service
@@ -31,13 +34,15 @@ public class FileService {
     private final S3Service s3Service;
     private final UserStorageClient userStorageClient;
     private final ConflictCopyService conflictCopyService;
+    private final OutboxEventWriter outboxEventWriter;
 
     public FileService(FileMetadataRepository fileMetadataRepository,
                        FileVersionRepository fileVersionRepository,
                        FileEmbeddingRepository fileEmbeddingRepository,
                        S3Service s3Service,
                        UserStorageClient userStorageClient,
-                       ConflictCopyService conflictCopyService){
+                       ConflictCopyService conflictCopyService,
+                       OutboxEventWriter outboxEventWriter){
 
         this.fileMetadataRepository = fileMetadataRepository;
         this.fileVersionRepository = fileVersionRepository;
@@ -45,6 +50,7 @@ public class FileService {
         this.s3Service = s3Service;
         this.userStorageClient = userStorageClient;
         this.conflictCopyService = conflictCopyService;
+        this.outboxEventWriter = outboxEventWriter;
     }
 
     @Transactional
@@ -98,6 +104,7 @@ public class FileService {
         fileVersionRepository.save(fileVersion);
 
         userStorageClient.addStorage(userId, fileSize);
+        outboxEventWriter.writeUploadedEvent(fileId, userId, fileMetadata.getFileName(), fileMetadata.getFileSizeBytes(), fileMetadata.getVersionNumber());
 
         return new FileUploadResponse(
                 fileId,
@@ -115,10 +122,10 @@ public class FileService {
 
         FileMetadata fileMetadata = fileMetadataRepository.findById(fileId)
                 .filter(fm -> fm.getUserId().equals(userId))
-                .orElseThrow(() -> new FileNotFoundException("File not found."));
+                .orElseThrow(() -> new FileNotFoundException(FILE_NOT_FOUND));
 
         if(Boolean.TRUE.equals(fileMetadata.getDeleted())){
-            throw new FileNotFoundException("File not found.");
+            throw new FileNotFoundException(FILE_NOT_FOUND);
         }
 
         if(Boolean.TRUE.equals(fileMetadata.getConflictCopy())){
@@ -132,11 +139,10 @@ public class FileService {
             throw new UncheckedIOException(ex);
         }
 
-        // AC-014-01/03: client already knows it's behind -- fork before touching the original at all.
         if(expectedVersion != null && fileMetadata.getVersionNumber() > expectedVersion){
             FileMetadata conflictCopy = conflictCopyService.createConflictCopy(
                     fileMetadata.getId(), userId, file.getOriginalFilename(), bytes, file.getContentType());
-            throw new FileConflictException(conflictCopy.getId(), conflictCopy.getFileName());
+            throw new FileConflictException(conflictCopy.getId(), conflictCopy.getFileName(), conflictCopy.getFileSizeBytes());
         }
 
         long oldFileSize = fileMetadata.getFileSizeBytes();
@@ -170,7 +176,7 @@ public class FileService {
             // Genuinely simultaneous race: someone else committed between our read and our write.
             FileMetadata conflictCopy = conflictCopyService.createConflictCopy(
                     fileId, userId, file.getOriginalFilename(), bytes, file.getContentType());
-            throw new FileConflictException(conflictCopy.getId(), conflictCopy.getFileName());
+            throw new FileConflictException(conflictCopy.getId(), conflictCopy.getFileName(), conflictCopy.getFileSizeBytes());
         }
 
         FileVersion fileVersion = FileVersion.builder()
@@ -185,6 +191,7 @@ public class FileService {
         fileVersionRepository.save(fileVersion);
 
         userStorageClient.addStorage(userId, sizeDelta);
+        outboxEventWriter.writeUpdatedEvent(fileId, userId, fileMetadata.getFileName(), fileMetadata.getFileSizeBytes(), fileMetadata.getVersionNumber());
 
         return new FileUpdateResponse(
                 fileId,
@@ -245,7 +252,7 @@ public class FileService {
         fm.setDeleted(true);
         fm.setDeletedAt(LocalDateTime.now());
         fileMetadataRepository.save(fm);
-        // Kafka events goes here.
+        outboxEventWriter.writeDeletedEvent(fm.getId(), userId, fm.getFileName(), fm.getFileSizeBytes(), fm.getVersionNumber());
 
     }
 
